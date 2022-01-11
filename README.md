@@ -1,6 +1,6 @@
 # Keybow 2040 CAT keyboard for Yaesu FTdx10 transceiver
 
-This is using the UART pads on the Keybow 2040 to communicate with a radio transceiver.
+This is using the UART pads on the Keybow 2040 to communicate with a radio transceiver. It gives you extra buttons you might miss on your radio's frontpanel.
 
 <img src="https://github.com/git1k2/keybow2040-cat/raw/main/kb-cat.jpg" width="640">
 
