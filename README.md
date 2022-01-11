@@ -1,4 +1,5 @@
 # Keybow 2040 CAT keyboard for Yaesu FTdx10 transceiver
+![Keybow 2040 CAT](https://github.com/git1k2/keybow2040-cat/raw/main/kb-cat.jpg)
 
 ## What you need
 * Pimoroni Keybow 2040.
