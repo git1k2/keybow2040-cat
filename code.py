@@ -1,4 +1,4 @@
-Aimport board
+import board
 import busio
 import re
 import time
