@@ -14,7 +14,7 @@ class FTdx10:
         # CAT commands
         self.cat_commands = {
             "BI": {"description": "Break-in", "on": "1",   "off": "0", "answer": "BI[0-9];"},
-            "BS": {"description": "Band select"},a
+            "BS": {"description": "Band select"},
             "CO02": {"description": "APF", "on": "0001", "off": "0000", "fill": 4, "answer": "CO02000[0-1];"},
             "KR": {"description": "Keyer", "on": "1",   "off": "0", "answer": "KR[0-9];"},
             "KS": {"description": "Keyer speed", "max": 60, "min": 4, "fill": 3, "answer": "KS0[0-6][0-9];"},
