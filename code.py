@@ -1,5 +1,6 @@
 import board
 import busio
+import math
 import re
 import time
 
@@ -9,7 +10,7 @@ class FTdx10:
     def __init__(self):
 
         # Setup up UART
-        self.uart = busio.UART(board.TX, board.RX, baudrate=38400, timeout=0.050)
+        self.uart = busio.UART(board.TX, board.RX, baudrate=38400, timeout=0.030)
 
         # CAT commands
         self.cat_commands = {
@@ -53,7 +54,7 @@ class FTdx10:
             else:
                 print("Radio not connected? Trying again...")
                 time.sleep(1)
-        
+
         self.update_all_cat_state()
 
 
@@ -104,10 +105,7 @@ class FTdx10:
         self.update_cat_state(command=commands_deduplicated)
 
 
-def key_press(key_obj=None, hold=None):
-    step = 1
-    if hold:
-        step = 10
+def key_press(key_obj=None):
     try:
         key_config = ftdx10.key_mapping[key_obj.number]
         key_cat_command = key_config["cat_command"]
@@ -127,25 +125,45 @@ def key_press(key_obj=None, hold=None):
                 if cat_state == on:
                     new_state = f"{int(off):0{fill}}"
                     ftdx10.send_cat(command=f"{key_cat_command}{new_state}")
-                    ftdx10.update_cat_state(command=key_cat_command)
+                    ftdx10.cat_commands[key_cat_command]["state"] = new_state
                 if cat_state == off:
                     new_state = f"{int(on):0{fill}}"
                     ftdx10.send_cat(command=f"{key_cat_command}{new_state}")
-                    ftdx10.update_cat_state(command=key_cat_command)
+                    ftdx10.cat_commands[key_cat_command]["state"] = new_state
 
             if key_operation == "up" or key_operation == "down":
                 min = int(ftdx10.cat_commands[key_cat_command]["min"])
                 max = int(ftdx10.cat_commands[key_cat_command]["max"])
                 fill = int(ftdx10.cat_commands[key_cat_command]["fill"])
+                state = int(cat_state)
+                
+                new_speed = f"{state:0{fill}}"
+                if key_operation == "up" and state < max:
+                    new_speed = f"{state + 1:0{fill}}"
+                    if key_obj.held is True and max - state > 10:
+                        if state % 10 == 0:
+                            new_speed = f"{state + 10:0{fill}}"
+                        else: 
+                            new_speed = f"{roundup(state):0{fill}}"
+                    elif key_obj.held is True and max - state <= 10:
+                        new_speed = f"{max:0{fill}}"
+                elif key_operation == "up" and state == max:
+                    new_speed = f"{max:0{fill}}"
 
-                if key_operation == "up" and int(cat_state) < max:
-                    new_speed = f"{int(cat_state) + step:0{fill}}"
-                    ftdx10.send_cat(command=f"{key_cat_command}{new_speed}")
-                    ftdx10.update_cat_state(command=key_cat_command)
-                if key_operation == "down" and int(cat_state) > min:
-                    new_speed = f"{int(cat_state) - step:0{fill}}"
-                    ftdx10.send_cat(command=f"{key_cat_command}{new_speed}")
-                    ftdx10.update_cat_state(command=key_cat_command)
+                if key_operation == "down" and state > min:
+                    new_speed = f"{state - 1:0{fill}}"
+                    if key_obj.held is True and state - min > 10:
+                        if state % 10 == 0:
+                            new_speed = f"{state - 10:0{fill}}"
+                        else: 
+                            new_speed = f"{rounddown(state):0{fill}}"
+                    elif key_obj.held is True and state - min <= 10:
+                        new_speed = f"{min:0{fill}}"
+                elif key_operation == "down" and state == min:
+                    new_speed = f"{min:0{fill}}"
+
+                ftdx10.send_cat(command=f"{key_cat_command}{new_speed}")
+                ftdx10.cat_commands[key_cat_command]["state"] = new_speed
 
         if "preset" in key_config:
             preset = key_config["preset"]
@@ -178,9 +196,15 @@ def set_state_color(key_obj=None):
 
             if "preset" in key_config:
                 key_obj.set_led(*preset_color)
-
     except KeyError as e:
         print(f"KeyError: {e}")
+
+
+def roundup(x):
+    return int(math.ceil(x / 10.0)) * 10
+
+def rounddown(x):
+    return int(math.floor(x / 10.0)) * 10
 
 # Set up Keybow
 i2c = board.I2C()
@@ -188,10 +212,10 @@ keybow = Keybow2040(i2c)
 keys = keybow.keys
 
 # Colors
-state_on = (255, 0, 0)    # red
-state_off = (0, 255, 0)   # green
-range_color = (0, 0, 255) # blue
-preset_color = (0, 50, 50)
+state_on = (55, 0, 0)
+state_off = (0, 55, 0)
+range_color = (50, 10, 0)
+preset_color = (10, 50, 50)
 keypress_color = (255, 255, 0) # yellow
 
 # Set up the radio
@@ -213,20 +237,33 @@ for key in keys:
     @keybow.on_release(key)
     def release_handler(key):
         key.led_off()
+        ftdx10.update_all_cat_state()
         set_state_color(key_obj=key)
 
     @keybow.on_hold(key)
     def hold_handler(key):
-        key_press(key_obj=key, hold=True)
+        key_press(key_obj=key)
+
+# Update keys every second.
+delay = 1
 
 initial = time.monotonic()
+dyn_delay = delay
 while True:
     # Always remember to call keybow.update()!
     keybow.update()
-    
     now = time.monotonic()
-    if now - initial > 1:
+    if now - initial > dyn_delay:
         initial = time.monotonic()
-        ftdx10.update_all_cat_state()
-        for key in keys:
-            set_state_color(key_obj=key)
+        # Do not update if any key is held.
+        if not any(key.held is True for key in keys):
+            dyn_delay = delay
+            ftdx10.update_all_cat_state()
+            for key in keys:
+                set_state_color(key_obj=key)
+        else:
+            for key in keys:
+                if key.held:
+                    dyn_delay = 0.50
+                    key_press(key_obj=key)
+
