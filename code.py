@@ -21,8 +21,6 @@ class FTdx10:
             "KS": {"description": "Keyer speed", "max": 60, "min": 4, "fill": 3, "answer": "KS0[0-6][0-9];"},
             "PC": {"description": "Power control", "max": 100, "min": 5, "fill": 3, "answer": "PC[0-1][0-9][0-9];"},
             "ZI": {"description": "Zero in"},
-
-
         }
 
         # Key mapping
@@ -55,14 +53,8 @@ class FTdx10:
             else:
                 print("Radio not connected? Trying again...")
                 time.sleep(1)
-
-        # Get state for configured cat commands.
-        command = []
-        for cat_cmd, config in self.cat_commands.items():
-            if "answer" in config:
-                command.append(cat_cmd)
-            commands_deduplicated = list(set(command))
-        self.update_cat_state(command=commands_deduplicated)
+        
+        self.update_all_cat_state()
 
 
     def send_cat(self, command=None):
@@ -71,7 +63,7 @@ class FTdx10:
             send_command = ""
             for item in command:
                 send_command += f"{item};"
-        print(f"Sending command: {send_command}")
+        #print(f"Sending command: {send_command}")
 
         self.uart.write(bytes(send_command, "ascii"))
 
@@ -79,11 +71,12 @@ class FTdx10:
         datastr = ""
         if data != None:
             datastr = ''.join([chr(b) for b in data])
-        print(f"Received: {datastr}")
+        #print(f"Received: {datastr}")
         if datastr == "":
             return ""
         else:
             return datastr
+
 
     def update_cat_state(self, command=None):
         if isinstance(command, str):
@@ -99,6 +92,16 @@ class FTdx10:
                     self.cat_commands[item]["state"] = state
             except KeyError as e:
                 print(f"KeyError: {e}")
+
+
+    def update_all_cat_state(self):
+        # Get state for configured cat commands.
+        command = []
+        for cat_cmd, config in self.cat_commands.items():
+            if "answer" in config:
+                command.append(cat_cmd)
+            commands_deduplicated = list(set(command))
+        self.update_cat_state(command=commands_deduplicated)
 
 
 def key_press(key_obj=None, hold=None):
@@ -216,7 +219,14 @@ for key in keys:
     def hold_handler(key):
         key_press(key_obj=key, hold=True)
 
-
+initial = time.monotonic()
 while True:
     # Always remember to call keybow.update()!
     keybow.update()
+    
+    now = time.monotonic()
+    if now - initial > 1:
+        initial = time.monotonic()
+        ftdx10.update_all_cat_state()
+        for key in keys:
+            set_state_color(key_obj=key)
