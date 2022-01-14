@@ -16,6 +16,7 @@ class FTdx10:
             "BI": {"description": "Break-in", "on": "1",   "off": "0", "answer": "BI[0-9];"},
             "BS": {"description": "Band select"},
             "CO02": {"description": "APF", "on": "0001", "off": "0000", "fill": 4, "answer": "CO02000[0-1];"},
+            "NR0": {"description": "DNR", "on": "1", "off": "0", "answer": "NR0[0-1];"},
             "KR": {"description": "Keyer", "on": "1",   "off": "0", "answer": "KR[0-9];"},
             "KS": {"description": "Keyer speed", "max": 60, "min": 4, "fill": 3, "answer": "KS0[0-6][0-9];"},
             "PC": {"description": "Power control", "max": 100, "min": 5, "fill": 3, "answer": "PC[0-1][0-9][0-9];"},
@@ -27,11 +28,12 @@ class FTdx10:
         # Key mapping
         self.key_mapping = {
             0: {"cat_command": "ZI", "preset": "0"},
-            1: {"cat_command": "KR", "operation": "toggle"},
+            1: {"cat_command": "BI", "operation": "toggle"},
+            2: {"cat_command": "KR", "operation": "toggle"},
             3: {"cat_command": "BS", "preset": "01"},
 
             4: {"cat_command": "CO02", "operation": "toggle"},
-            5: {"cat_command": "BI", "operation": "toggle"},
+            5: {"cat_command": "NR0", "operation": "toggle"},
             7: {"cat_command": "BS", "preset": "03"},
 
             8: {"cat_command": "KS", "operation": "down"},
