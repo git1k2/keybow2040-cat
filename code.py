@@ -17,6 +17,7 @@ class FTdx10:
             "BI": {"description": "Break-in", "on": "1",   "off": "0", "answer": "BI[0-9];"},
             "BS": {"description": "Band select"},
             "CO02": {"description": "APF", "on": "0001", "off": "0000", "fill": 4, "answer": "CO02000[0-1];"},
+            "EX030104": {"description": "RF-SQL", "on": "1", "off": "0", "answer": "EX030104[0-1];"},
             "NR0": {"description": "DNR", "on": "1", "off": "0", "answer": "NR0[0-1];"},
             "KR": {"description": "Keyer", "on": "1",   "off": "0", "answer": "KR[0-9];"},
             "KS": {"description": "Keyer speed", "max": 60, "min": 4, "fill": 3, "answer": "KS0[0-6][0-9];"},
@@ -33,6 +34,7 @@ class FTdx10:
 
             4: {"cat_command": "CO02", "operation": "toggle"},
             5: {"cat_command": "NR0", "operation": "toggle"},
+            6: {"cat_command": "EX030104", "operation": "toggle"},
             7: {"cat_command": "BS", "preset": "03"},
 
             8: {"cat_command": "KS", "operation": "down"},
@@ -136,14 +138,14 @@ def key_press(key_obj=None):
                 max = int(ftdx10.cat_commands[key_cat_command]["max"])
                 fill = int(ftdx10.cat_commands[key_cat_command]["fill"])
                 state = int(cat_state)
-                
+
                 new_speed = f"{state:0{fill}}"
                 if key_operation == "up" and state < max:
                     new_speed = f"{state + 1:0{fill}}"
                     if key_obj.held is True and max - state > 10:
                         if state % 10 == 0:
                             new_speed = f"{state + 10:0{fill}}"
-                        else: 
+                        else:
                             new_speed = f"{roundup(state):0{fill}}"
                     elif key_obj.held is True and max - state <= 10:
                         new_speed = f"{max:0{fill}}"
@@ -155,7 +157,7 @@ def key_press(key_obj=None):
                     if key_obj.held is True and state - min > 10:
                         if state % 10 == 0:
                             new_speed = f"{state - 10:0{fill}}"
-                        else: 
+                        else:
                             new_speed = f"{rounddown(state):0{fill}}"
                     elif key_obj.held is True and state - min <= 10:
                         new_speed = f"{min:0{fill}}"
@@ -261,6 +263,7 @@ while True:
             ftdx10.update_all_cat_state()
             for key in keys:
                 set_state_color(key_obj=key)
+        # If a key is held, repeat the key press.
         else:
             for key in keys:
                 if key.held:
